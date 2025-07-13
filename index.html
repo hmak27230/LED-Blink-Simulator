@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LPC1768 LED Blinky Simulator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .section h2 {
+            color: white;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            text-align: center;
+        }
+
+        .led-board {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .led {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #2a2a2a;
+            border: 3px solid #444;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #888;
+            transition: all 0.3s ease;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .led.on {
+            background: radial-gradient(circle, #ff6b6b, #ff3838);
+            border-color: #ff6b6b;
+            box-shadow: 0 0 20px #ff6b6b, inset 0 2px 4px rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .control-btn {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .control-btn:active {
+            transform: translateY(0);
+        }
+
+        .control-btn.active {
+            background: linear-gradient(45deg, #ff6b6b, #ff3838);
+        }
+
+        .joystick-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .joystick {
+            width: 150px;
+            height: 150px;
+            background: #2a2a2a;
+            border-radius: 50%;
+            position: relative;
+            border: 5px solid #444;
+            box-shadow: inset 0 4px 8px rgba(0, 0, 0, 0.5);
+        }
+
+        .joystick-button {
+            position: absolute;
+            background: #666;
+            border: 2px solid #888;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 10px;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .joystick-button:hover {
+            background: #777;
+        }
+
+        .joystick-button.active {
+            background: #4CAF50;
+            border-color: #4CAF50;
+            box-shadow: 0 0 10px #4CAF50;
+        }
+
+        .joy-up {
+            top: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 30px;
+            height: 20px;
+        }
+
+        .joy-down {
+            bottom: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 30px;
+            height: 20px;
+        }
+
+        .joy-left {
+            left: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 30px;
+        }
+
+        .joy-right {
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 30px;
+        }
+
+        .joy-center {
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+        }
+
+        .lcd-screen {
+            background: #1a1a1a;
+            border: 5px solid #333;
+            border-radius: 10px;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            color: #00ff00;
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            text-align: center;
+            font-size: 16px;
+            box-shadow: inset 0 4px 8px rgba(0, 0, 0, 0.5);
+        }
+
+        .status-panel {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            text-align: center;
+        }
+
+        .status-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .status-label {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+
+        .status-value {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .method-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .method-masking { background: #ff6b6b; }
+        .method-function { background: #4CAF50; }
+        .method-bitbanding { background: #2196F3; }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .controls {
+                grid-template-columns: 1fr;
+            }
+            
+            .status-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔴 LPC1768 LED Blinky Simulator</h1>
+        
+        <div class="main-content">
+            <div class="section">
+                <h2>LED Array</h2>
+                <div class="led-board">
+                    <div class="led" id="led0">LED0</div>
+                    <div class="led" id="led1">LED1</div>
+                    <div class="led" id="led2">LED2</div>
+                    <div class="led" id="led3">LED3</div>
+                    <div class="led" id="led4">LED4</div>
+                    <div class="led" id="led5">LED5</div>
+                    <div class="led" id="led6">LED6</div>
+                    <div class="led" id="led7">LED7</div>
+                </div>
+                
+                <div class="controls">
+                    <button class="control-btn" id="maskingBtn">
+                        <span class="method-indicator method-masking"></span>Masking Mode
+                    </button>
+                    <button class="control-btn" id="functionBtn">
+                        <span class="method-indicator method-function"></span>Function Mode
+                    </button>
+                    <button class="control-btn" id="bitbandingBtn">
+                        <span class="method-indicator method-bitbanding"></span>Bit-banding Mode
+                    </button>
+                    <button class="control-btn" id="autoBtn">Auto Cycle</button>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>Joystick Controller</h2>
+                <div class="joystick-container">
+                    <div class="joystick">
+                        <div class="joystick-button joy-up" id="joyUp">▲</div>
+                        <div class="joystick-button joy-down" id="joyDown">▼</div>
+                        <div class="joystick-button joy-left" id="joyLeft">◄</div>
+                        <div class="joystick-button joy-right" id="joyRight">►</div>
+                        <div class="joystick-button joy-center" id="joyCenter">●</div>
+                    </div>
+                    
+                    <div class="lcd-screen" id="lcdScreen">
+                        <div>Joystick Direction</div>
+                        <div id="lcdDirection">NONE</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="status-panel">
+            <div class="status-grid">
+                <div class="status-item">
+                    <div class="status-label">Current Mode</div>
+                    <div class="status-value" id="currentMode">IDLE</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-label">Active LEDs</div>
+                    <div class="status-value" id="activeLeds">0</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-label">Cycle Count</div>
+                    <div class="status-value" id="cycleCount">0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class LPC1768Simulator {
+            constructor() {
+                this.leds = [];
+                this.currentMode = 'IDLE';
+                this.isAutoMode = false;
+                this.cycleCount = 0;
+                this.autoInterval = null;
+                this.currentJoystickDirection = 'NONE';
+                
+                this.initializeLEDs();
+                this.initializeControls();
+                this.initializeJoystick();
+                this.updateStatus();
+            }
+            
+            initializeLEDs() {
+                for (let i = 0; i < 8; i++) {
+                    this.leds[i] = {
+                        element: document.getElementById(`led${i}`),
+                        state: false
+                    };
+                }
+            }
+            
+            initializeControls() {
+                document.getElementById('maskingBtn').addEventListener('click', () => {
+                    this.setMode('MASKING');
+                    this.demonstrateMasking();
+                });
+                
+                document.getElementById('functionBtn').addEventListener('click', () => {
+                    this.setMode('FUNCTION');
+                    this.demonstrateFunction();
+                });
+                
+                document.getElementById('bitbandingBtn').addEventListener('click', () => {
+                    this.setMode('BITBANDING');
+                    this.demonstrateBitbanding();
+                });
+                
+                document.getElementById('autoBtn').addEventListener('click', () => {
+                    this.toggleAutoMode();
+                });
+            }
+            
+            initializeJoystick() {
+                const joystickButtons = {
+                    'joyUp': 'UP',
+                    'joyDown': 'DOWN',
+                    'joyLeft': 'LEFT',
+                    'joyRight': 'RIGHT',
+                    'joyCenter': 'SELECT'
+                };
+                
+                Object.entries(joystickButtons).forEach(([id, direction]) => {
+                    const button = document.getElementById(id);
+                    button.addEventListener('mousedown', () => this.handleJoystick(direction, true));
+                    button.addEventListener('mouseup', () => this.handleJoystick(direction, false));
+                    button.addEventListener('mouseleave', () => this.handleJoystick(direction, false));
+                });
+            }
+            
+            handleJoystick(direction, pressed) {
+                const button = document.getElementById(`joy${direction.charAt(0) + direction.slice(1).toLowerCase()}`);
+                if (direction === 'SELECT') {
+                    button.id = 'joyCenter';
+                    button = document.getElementById('joyCenter');
+                }
+                
+                if (pressed) {
+                    button.classList.add('active');
+                    this.currentJoystickDirection = direction;
+                    this.updateJoystickDisplay(direction);
+                    this.updateJoystickLEDs(direction);
+                } else {
+                    button.classList.remove('active');
+                    this.currentJoystickDirection = 'NONE';
+                    this.updateJoystickDisplay('NONE');
+                    this.turnOffAllLEDs();
+                }
+            }
+            
+            updateJoystickDisplay(direction) {
+                document.getElementById('lcdDirection').textContent = direction;
+            }
+            
+            updateJoystickLEDs(direction) {
+                this.turnOffAllLEDs();
+                
+                switch (direction) {
+                    case 'UP':
+                        this.turnOnLED(0);
+                        break;
+                    case 'DOWN':
+                        this.turnOnLED(1);
+                        break;
+                    case 'LEFT':
+                        this.turnOnLED(2);
+                        break;
+                    case 'RIGHT':
+                        this.turnOnLED(3);
+                        break;
+                    case 'SELECT':
+                        this.turnOnLED(4);
+                        break;
+                }
+            }
+            
+            setMode(mode) {
+                this.currentMode = mode;
+                this.updateModeButtons();
+                this.updateStatus();
+            }
+            
+            updateModeButtons() {
+                const buttons = ['maskingBtn', 'functionBtn', 'bitbandingBtn'];
+                buttons.forEach(btnId => {
+                    document.getElementById(btnId).classList.remove('active');
+                });
+                
+                const activeBtn = {
+                    'MASKING': 'maskingBtn',
+                    'FUNCTION': 'functionBtn',
+                    'BITBANDING': 'bitbandingBtn'
+                }[this.currentMode];
+                
+                if (activeBtn) {
+                    document.getElementById(activeBtn).classList.add('active');
+                }
+            }
+            
+            demonstrateMasking() {
+                this.turnOffAllLEDs();
+                // Simulate masking method - turning on LEDs 0, 2, 4, 6
+                setTimeout(() => this.turnOnLED(0), 200);
+                setTimeout(() => this.turnOnLED(2), 400);
+                setTimeout(() => this.turnOnLED(4), 600);
+                setTimeout(() => this.turnOnLED(6), 800);
+                setTimeout(() => this.turnOffAllLEDs(), 2000);
+            }
+            
+            demonstrateFunction() {
+                this.turnOffAllLEDs();
+                // Simulate function method - turning on LEDs 1, 3, 5, 7
+                setTimeout(() => this.turnOnLED(1), 200);
+                setTimeout(() => this.turnOnLED(3), 400);
+                setTimeout(() => this.turnOnLED(5), 600);
+                setTimeout(() => this.turnOnLED(7), 800);
+                setTimeout(() => this.turnOffAllLEDs(), 2000);
+            }
+            
+            demonstrateBitbanding() {
+                this.turnOffAllLEDs();
+                // Simulate bit-banding method - turning on alternating pattern
+                for (let i = 0; i < 8; i++) {
+                    setTimeout(() => {
+                        this.turnOnLED(i);
+                        if (i > 0) this.turnOffLED(i - 1);
+                    }, i * 200);
+                }
+                setTimeout(() => this.turnOffAllLEDs(), 2000);
+            }
+            
+            toggleAutoMode() {
+                this.isAutoMode = !this.isAutoMode;
+                const btn = document.getElementById('autoBtn');
+                
+                if (this.isAutoMode) {
+                    btn.classList.add('active');
+                    btn.textContent = 'Stop Auto';
+                    this.startAutoMode();
+                } else {
+                    btn.classList.remove('active');
+                    btn.textContent = 'Auto Cycle';
+                    this.stopAutoMode();
+                }
+            }
+            
+            startAutoMode() {
+                let modeIndex = 0;
+                const modes = ['MASKING', 'FUNCTION', 'BITBANDING'];
+                
+                this.autoInterval = setInterval(() => {
+                    this.setMode(modes[modeIndex]);
+                    
+                    switch (modes[modeIndex]) {
+                        case 'MASKING':
+                            this.demonstrateMasking();
+                            break;
+                        case 'FUNCTION':
+                            this.demonstrateFunction();
+                            break;
+                        case 'BITBANDING':
+                            this.demonstrateBitbanding();
+                            break;
+                    }
+                    
+                    modeIndex = (modeIndex + 1) % modes.length;
+                    this.cycleCount++;
+                    this.updateStatus();
+                }, 3000);
+            }
+            
+            stopAutoMode() {
+                if (this.autoInterval) {
+                    clearInterval(this.autoInterval);
+                    this.autoInterval = null;
+                }
+                this.setMode('IDLE');
+                this.turnOffAllLEDs();
+            }
+            
+            turnOnLED(index) {
+                if (index >= 0 && index < 8) {
+                    this.leds[index].state = true;
+                    this.leds[index].element.classList.add('on');
+                    this.updateStatus();
+                }
+            }
+            
+            turnOffLED(index) {
+                if (index >= 0 && index < 8) {
+                    this.leds[index].state = false;
+                    this.leds[index].element.classList.remove('on');
+                    this.updateStatus();
+                }
+            }
+            
+            turnOffAllLEDs() {
+                this.leds.forEach((led, index) => {
+                    this.turnOffLED(index);
+                });
+            }
+            
+            updateStatus() {
+                document.getElementById('currentMode').textContent = this.currentMode;
+                document.getElementById('activeLeds').textContent = this.leds.filter(led => led.state).length;
+                document.getElementById('cycleCount').textContent = this.cycleCount;
+            }
+        }
+        
+        // Initialize the simulator when the page loads
+        window.addEventListener('load', () => {
+            new LPC1768Simulator();
+        });
+    </script>
+</body>
+</html>
